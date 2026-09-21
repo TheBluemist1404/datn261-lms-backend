@@ -1,0 +1,13 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// The persistent domain model is intentionally not defined yet.
+// Notion is the source of truth for requirements and system modelling.
+// Add models only after the corresponding domain/data-model decisions are reviewed.

@@ -1,22 +1,31 @@
 # Contributing
 
-This template favors small, reviewable changes and conventional NestJS structure.
+This repository contains the NestJS backend for the DATN 261 Learner-Oriented LMS.
+
+## Source of Truth
+
+Product requirements, use cases, domain models, authorization rules, data modelling, and system architecture are maintained in the DATN 261 Notion workspace.
+
+Do not invent persistent entities, API behavior, permissions, or lifecycle rules only in code. If implementation exposes a missing decision, refine the relevant Notion model first and reference that decision from the issue/PR.
 
 ## Start From an Issue
 
-For non-trivial work, create or claim an issue with scope, acceptance criteria, and verification expectations.
+Non-trivial work should begin with a GitHub issue containing:
+
+- scope and expected behavior;
+- relevant requirement IDs/use cases from Notion;
+- acceptance criteria;
+- expected test evidence.
 
 ## Branch From `main`
-
-Keep `main` current before branching:
 
 ```bash
 git switch main
 git pull --ff-only
-git switch -c feat/42-example-feature
+git switch -c feat/42-course-enrollment
 ```
 
-Recommended branch prefixes:
+Recommended prefixes:
 
 ```text
 feat/
@@ -27,36 +36,44 @@ docs/
 chore/
 ```
 
-## Follow NestJS Boundaries
+## Backend Structure
 
-Prefer cohesive domain modules rather than global technical-layer folders.
+Application code is organized primarily by business domain under `src/modules/` as domains are implemented.
 
-A domain may contain its own controller, service/providers, DTOs, guards, interceptors, and domain-specific helpers. Keep controllers focused on transport concerns and put application behavior in providers/services.
+Cross-cutting adapters belong under `src/infrastructure/`, for example PostgreSQL/Prisma integration. Avoid global controller/service/repository folders that scatter one domain across the repository.
 
-Do not introduce repository interfaces, ports/adapters, or other abstraction layers until the project has a concrete need for them.
+Follow NestJS module/controller/provider conventions and keep controllers focused on transport concerns.
 
-Persistence is intentionally not part of this template. Database and ORM choices belong to the project created from the template.
+## Persistence
+
+PostgreSQL + Prisma is the selected persistence stack.
+
+The Prisma schema must be derived from the reviewed Notion data model. Do not add speculative tables or relations simply because they may be useful later.
+
+Create migrations for reviewed schema changes and include migration impact in the PR.
+
+## Authorization
+
+Role checks are only the first layer. Protected operations may depend on ownership, enrollment state, publication state, group membership, or explicit sharing.
+
+Authorization must be enforced on the backend and on protected real-time connections. Frontend visibility checks are not security controls.
 
 ## Commit Cleanly
 
 Use Conventional Commits:
 
 ```text
-feat: add account module
-fix: validate empty display name
-test: cover health endpoint
-refactor: extract token parser
-docs: clarify local setup
+feat: add enrollment workflow
+fix: block revoked resource references
+test: cover course access policy
+refactor: extract workspace access checks
+docs: clarify database setup
 chore: update CI configuration
 ```
 
-Husky runs staged-file checks and a TypeScript typecheck before commits. Commit messages are validated by commitlint.
-
-Do not bypass hooks with `--no-verify` to land broken code.
+Husky runs staged-file checks and typechecking. Commit messages are validated by commitlint.
 
 ## Test the Change
-
-Use unit tests for isolated behavior and E2E tests for HTTP/application boundaries.
 
 Before opening a pull request:
 
@@ -64,21 +81,18 @@ Before opening a pull request:
 pnpm ci
 ```
 
-This runs Biome checks, TypeScript, unit tests, E2E tests, and the production build.
+The quality gate checks Biome, the Prisma schema, TypeScript, unit tests, E2E tests, and the production build.
+
+Tests that require a real database should explicitly provision/seed their test database rather than depending on a developer's local state.
 
 ## Pull Requests
 
-Keep PRs focused. A good PR:
+Keep PRs focused and individually traceable. A good PR:
 
 - links the relevant issue;
-- explains behavior or architectural changes;
-- includes appropriate test evidence;
+- references applicable Notion requirements/use cases;
+- explains authorization or data-model changes;
+- includes appropriate tests;
 - avoids unrelated cleanup;
-- documents new environment variables or setup steps;
-- calls out follow-up work or limitations.
-
-## Dependencies
-
-Do not add dependencies simply to save a few lines of code. A new dependency should solve a concrete problem and fit the project's maintenance/security expectations.
-
-Database clients, ORMs, authentication packages, queues, caches, storage SDKs, and similar infrastructure should be introduced by the consuming project when required.
+- documents migrations/environment changes;
+- calls out known limitations or follow-up work.

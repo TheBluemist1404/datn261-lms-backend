@@ -1,75 +1,82 @@
-# NestJS Template
+# Learner-Oriented LMS — Backend
 
-Reusable, database-agnostic NestJS starter for TypeScript backend projects.
+[![CI](https://github.com/TheBluemist1404/datn261-lms-backend/actions/workflows/ci.yml/badge.svg)](https://github.com/TheBluemist1404/datn261-lms-backend/actions/workflows/ci.yml)
 
-The template stays close to NestJS conventions while adding a consistent development workflow shared with the rest of the stack: pnpm, Biome, Vitest, Conventional Commits, GitHub Actions, environment validation, OpenAPI bootstrap, and a basic health endpoint.
+NestJS backend for the **DATN 261 Learner-Oriented Learning Management System**.
 
-## Principles
+The system combines conventional LMS workflows with a student-owned knowledge workspace, permission-aware references to canonical course material, assessment/progress workflows, and real-time collaborative study spaces.
 
-- Follow NestJS conventions first.
-- Organize application code by domain/module, not by global controller/service/repository folders.
-- Keep controllers thin; application behavior belongs in providers/services.
-- Keep infrastructure generic until a project actually needs it.
-- Do **not** assume an ORM, database, authentication system, queue, cache, or cloud provider.
-- Add abstractions when concrete complexity justifies them, not preemptively.
+## Source of Truth
 
-## Included
+Detailed requirements and system modelling live in Notion:
+
+- [Proposal](https://app.notion.com/p/3d9eb649baec804ab901f1ac0a960daa)
+- [Requirements & System Modelling](https://app.notion.com/p/3dceb649baec80239320fab55e7a7208)
+
+Notion is canonical for product behavior, domain boundaries, authorization rules, and data modelling. This repository implements those decisions rather than redefining them independently.
+
+## Architecture
+
+```text
+React + Lexical
+      │
+      ├── REST /api ───────────> NestJS API
+      │                           Auth / RBAC / LMS domains
+      │                                  │
+      │                                  ▼
+      │                          PostgreSQL + Prisma
+      │
+      └── WebSocket + Yjs <────> Collaboration service
+                                  shared documents / presence
+
+NestJS API ─────────────────────> S3-compatible object storage
+                                  (when file storage is implemented)
+```
+
+The backend follows NestJS conventions and organizes application code by business domain.
+
+```text
+src/
+├── config/
+├── health/
+├── infrastructure/
+│   └── database/
+│       └── prisma/
+└── modules/                 # created as reviewed domains enter implementation
+```
+
+Domain modules are intentionally not scaffolded yet. Requirements and models are reviewed in Notion before persistent schemas and API behavior are committed.
+
+## Current Foundation
 
 - NestJS 12 + TypeScript
-- pnpm
-- Biome formatting/linting
-- Vitest unit and E2E testing
-- `@nestjs/config` with environment validation
-- Global `ValidationPipe`
+- REST API prefix at `/api`
+- PostgreSQL + Prisma ORM foundation
+- environment validation with `@nestjs/config`
+- global Nest `ValidationPipe`
 - Swagger/OpenAPI at `/docs`
-- Health endpoint at `/health`
-- Graceful shutdown hooks
+- health endpoint at `/health`
+- Vitest + Supertest
+- Biome
 - Husky + lint-staged + commitlint
-- GitHub Actions CI
+- pnpm
+- GitHub Actions
 
-## Project Structure
+The Prisma schema currently contains only the PostgreSQL datasource and client generator. Domain models will be added after the corresponding Notion data-model decisions are reviewed.
 
-```text
-src/
-├── main.ts
-├── app.module.ts
-├── app.controller.ts
-├── app.service.ts
-├── config/
-│   └── env.validation.ts
-└── health/
-    ├── health.controller.ts
-    ├── health.controller.spec.ts
-    └── health.module.ts
+## Local Development
 
-test/
-└── app.e2e-spec.ts
-```
-
-When application domains are introduced, prefer cohesive modules:
-
-```text
-src/
-└── modules/
-    ├── auth/
-    ├── users/
-    └── courses/
-```
-
-Each module owns its controllers, providers/services, DTOs, guards, and other domain-specific code. Shared cross-cutting infrastructure belongs in clearly named shared locations only when it is genuinely reused.
-
-## Requirements
+### Requirements
 
 - Node.js **22.12+**
-- pnpm **12** (the expected version is pinned through `packageManager`)
+- pnpm **12**
+- PostgreSQL
 
 Enable Corepack if needed:
 
 ```bash
 corepack enable
 ```
-
-## Getting Started
 
 Install dependencies:
 
@@ -89,61 +96,93 @@ PowerShell:
 Copy-Item .env.example .env
 ```
 
-Start the development server:
+Set `DATABASE_URL` to your local or development PostgreSQL database, then validate the Prisma setup:
+
+```bash
+pnpm prisma:validate
+pnpm prisma:generate
+```
+
+Start the backend:
 
 ```bash
 pnpm start:dev
 ```
 
-Default endpoints:
+### Local endpoints
 
-- API root: `http://localhost:3000`
-- Health: `http://localhost:3000/health`
-- Swagger: `http://localhost:3000/docs`
+```text
+Frontend        http://localhost:3000
+Backend         http://localhost:3001
+Application API http://localhost:3001/api/*
+Health          http://localhost:3001/health
+Swagger         http://localhost:3001/docs
+```
 
-## Environment Variables
+The frontend should use `/api` as its API base and proxy that path to the backend during local development.
+
+### Environment
 
 ```env
 NODE_ENV=development
-PORT=3000
-CORS_ORIGIN=http://localhost:5173
+PORT=3001
+CORS_ORIGIN=http://localhost:3000
 SWAGGER_ENABLED=true
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/datn261_lms
 ```
 
-`CORS_ORIGIN` accepts a comma-separated list. Use `*` only when that behavior is actually appropriate for the project.
+Never commit real credentials or local `.env` files.
 
-## Commands
+## Database Workflow
+
+The selected persistence stack is PostgreSQL + Prisma.
+
+Useful commands:
 
 | Command | Purpose |
 | --- | --- |
-| `pnpm start` | Start the application |
-| `pnpm start:dev` | Start in watch mode |
-| `pnpm start:debug` | Start in debug/watch mode |
-| `pnpm build` | Compile the application |
-| `pnpm start:prod` | Run the compiled application |
+| `pnpm prisma:validate` | Validate Prisma configuration/schema |
+| `pnpm prisma:generate` | Generate Prisma Client |
+| `pnpm prisma:format` | Format the Prisma schema |
+| `pnpm db:migrate` | Create/apply development migrations |
+| `pnpm db:deploy` | Apply committed migrations in deployment |
+| `pnpm db:studio` | Open Prisma Studio |
+
+Do not create database entities speculatively. The reviewed Notion domain/data model drives Prisma models and migrations.
+
+## Quality Commands
+
+| Command | Purpose |
+| --- | --- |
+| `pnpm start:dev` | Run NestJS in watch mode |
+| `pnpm build` | Compile the backend |
 | `pnpm typecheck` | Run TypeScript without emitting |
 | `pnpm test` | Run unit tests |
-| `pnpm test:watch` | Run unit tests in watch mode |
-| `pnpm test:cov` | Run unit tests with coverage |
 | `pnpm test:e2e` | Run E2E tests |
+| `pnpm test:cov` | Run tests with coverage |
 | `pnpm lint` | Lint with Biome |
 | `pnpm format` | Format with Biome |
 | `pnpm check` | Run Biome checks |
-| `pnpm check:fix` | Apply safe Biome fixes |
-| `pnpm ci` | Run the local CI-equivalent gate |
+| `pnpm ci` | Run the complete local quality gate |
 
-## Using This Template
+## Contribution Workflow
 
-After creating a project from this repository:
+Coursework changes should remain individually traceable.
 
-1. Rename the package in `package.json`.
-2. Replace this README with project-specific product/setup documentation.
-3. Keep or adapt `RULESET.md` and `CONTRIBUTING.md`.
-4. Add persistence, authentication, messaging, storage, and other infrastructure **at project level**.
-5. Introduce domain modules only when implementation begins; do not scaffold empty feature trees.
+```text
+Notion requirement / model
+        ↓
+GitHub issue
+        ↓
+feature branch
+        ↓
+focused Conventional Commits
+        ↓
+Pull Request
+        ↓
+CI + review
+        ↓
+main
+```
 
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for branch, commit, testing, and pull-request conventions.
-
-See [RULESET.md](RULESET.md) for architectural and repository rules.
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [RULESET.md](RULESET.md) before implementation work.

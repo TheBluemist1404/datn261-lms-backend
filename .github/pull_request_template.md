@@ -2,6 +2,14 @@
 
 Describe the change and why it is needed.
 
+## Requirements / modelling
+
+- Requirement IDs:
+- Use case(s):
+- Notion model or architectural decision affected:
+
+If the change introduces or alters product behavior, update the canonical Notion documentation before or with the implementation.
+
 ## Related issue
 
 Closes #
@@ -9,10 +17,12 @@ Closes #
 ## Verification
 
 - [ ] `pnpm ci` passes locally
-- [ ] Relevant tests were added or updated
+- [ ] Relevant unit/E2E tests were added or updated
+- [ ] Authorization implications were reviewed
+- [ ] Prisma/schema changes match the agreed Notion data model
 - [ ] No secrets or local environment files are included
-- [ ] Documentation was updated when developer workflow or behavior changed
+- [ ] Documentation/setup was updated when needed
 
 ## Notes
 
-Call out architectural decisions, known limitations, or follow-up work.
+Call out architectural decisions, migrations, compatibility concerns, known limitations, or follow-up work.

@@ -29,16 +29,22 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     throw new Error(`NODE_ENV must be one of: ${NODE_ENV_VALUES.join(', ')}.`);
   }
 
-  const port = Number(config.PORT ?? 3000);
+  const port = Number(config.PORT ?? 3001);
 
   if (!Number.isInteger(port) || port < 1 || port > 65_535) {
     throw new Error('PORT must be an integer between 1 and 65535.');
   }
 
-  const corsOrigin = String(config.CORS_ORIGIN ?? 'http://localhost:5173').trim();
+  const corsOrigin = String(config.CORS_ORIGIN ?? 'http://localhost:3000').trim();
 
   if (!corsOrigin) {
     throw new Error('CORS_ORIGIN must not be empty.');
+  }
+
+  const databaseUrl = String(config.DATABASE_URL ?? '').trim();
+
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL is required.');
   }
 
   return {
@@ -46,6 +52,7 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     NODE_ENV: nodeEnv,
     PORT: port,
     CORS_ORIGIN: corsOrigin,
+    DATABASE_URL: databaseUrl,
     SWAGGER_ENABLED: parseBoolean(config.SWAGGER_ENABLED, nodeEnv !== 'production'),
   };
 }

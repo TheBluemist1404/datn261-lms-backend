@@ -1,16 +1,24 @@
-# Repository Rules
+# DATN 261 Backend Rules
 
-These rules define the default engineering boundaries for repositories created from this template.
+These rules define the engineering boundaries for the Learner-Oriented LMS backend.
 
-## 1. Follow NestJS Conventions First
+## 1. Notion Is the Product Source of Truth
+
+The DATN 261 Notion workspace owns requirements, use cases, domain models, authorization rules, system architecture, and the conceptual data model.
+
+Code and database migrations implement those decisions; they must not silently redefine them.
+
+If implementation reveals an unresolved product rule, update/review the relevant Notion model before hard-coding the decision.
+
+## 2. Follow NestJS Conventions First
 
 Use Nest modules, controllers, providers/services, guards, pipes, interceptors, and decorators according to their intended framework roles.
 
 Do not build a parallel framework inside NestJS.
 
-## 2. Organize by Domain
+## 3. Organize by Business Domain
 
-As the application grows, prefer:
+As implementation begins, application features belong under:
 
 ```text
 src/
@@ -24,71 +32,101 @@ src/
 
 Do not create global `controllers/`, `services/`, `repositories/`, or `dto/` folders that scatter one domain across the repository.
 
-Small applications may keep modules directly under `src/`; consistency inside the consuming project matters more than forcing empty folders.
+Do not scaffold empty domain modules before their requirements are ready.
 
-## 3. Keep Controllers Thin
+## 4. Keep Infrastructure Explicit
 
-Controllers handle transport concerns: routing, request extraction, status codes, and delegation.
+Cross-cutting technical adapters belong under `src/infrastructure/`.
 
-Business/application behavior belongs in injectable providers/services.
+Current selected infrastructure:
 
-## 4. Avoid Premature Architecture
+- PostgreSQL;
+- Prisma ORM;
+- S3-compatible object storage when file storage is implemented;
+- an authenticated Yjs/WebSocket collaboration path when real-time work is implemented.
 
-Do not introduce Clean Architecture, Hexagonal Architecture, repository ports, use-case classes, mapping layers, or domain wrappers by default.
+Domain modules may depend on infrastructure providers, but persistence/storage implementation details should not leak into controllers.
 
-Add an abstraction when it provides a concrete boundary, enables meaningful substitution/testing, or resolves demonstrated complexity.
+## 5. Keep Controllers Thin
 
-## 5. Persistence Is Project-Level
+Controllers handle HTTP transport concerns: routing, request extraction, DTO validation, status codes, and delegation.
 
-This template is database-agnostic.
+Business/application behavior belongs in providers/services.
 
-Do **not** add Prisma, TypeORM, MikroORM, Sequelize, Mongoose, database drivers, migrations, or persistence-specific base classes to the template unless the template's scope is explicitly changed.
+## 6. Authorization Is Resource-Aware
 
-A consuming project chooses and configures its own persistence layer.
+Do not rely on role checks alone.
 
-## 6. Configuration
+Authorization can depend on:
 
-- Environment variables must be declared in `.env.example`.
-- Validate environment values at startup.
-- Never commit secrets or local `.env` files.
-- Project-specific configuration should be added deliberately rather than growing one catch-all config file.
+- ownership;
+- current enrollment;
+- course/content publication state;
+- study-group membership;
+- explicit sharing/invitation;
+- administrative moderation scope.
 
-## 7. Validation and API Boundaries
+Course-resource references must re-check both note/page access and current access to the canonical course resource.
 
-Use DTOs plus Nest validation for external input.
+Frontend checks are UX only. Backend REST and WebSocket paths enforce authorization.
 
-Do not trust client-side validation for security or correctness.
+## 7. Prisma Models Follow the Reviewed Data Model
 
-Swagger/OpenAPI should describe public HTTP contracts when enabled.
+PostgreSQL + Prisma is the project persistence stack.
 
-## 8. Testing
+The Prisma schema must be derived from the canonical Notion Data Model & ERD. Do not add speculative models, fields, enums, or relations.
 
-- Unit-test meaningful provider/controller behavior.
+Every reviewed schema change should be represented by a migration once the database baseline is established.
+
+Generated Prisma Client code is not committed.
+
+## 8. Avoid Premature Architecture
+
+Do not introduce repository ports, use-case classes, mapping layers, generic base services, or domain wrappers by default.
+
+Add an abstraction when it creates a concrete boundary, supports meaningful substitution/testing, or resolves demonstrated complexity.
+
+## 9. Configuration and Secrets
+
+- Declare required environment variables in `.env.example`.
+- Validate runtime configuration at startup.
+- Never commit real secrets or local `.env` files.
+- Production credentials belong in the deployment environment.
+
+## 10. API Boundary
+
+- Application REST routes live under `/api`.
+- `/health` is an infrastructure endpoint outside the API prefix.
+- Swagger is exposed at `/docs` when enabled.
+- Use DTOs plus Nest validation at external boundaries.
+- Do not introduce API versioning until there is a concrete compatibility need.
+
+## 11. Testing
+
+- Unit-test meaningful policy/service behavior.
 - Use E2E tests for important HTTP/application boundaries.
+- Add explicit authorization tests for protected resources.
+- Real-time collaboration must include connection authorization, convergence, and reconnect tests.
 - Keep tests deterministic and independent from developer machines.
-- Project-level infrastructure tests may use real services/containers when the project introduces them.
 
 Run `pnpm ci` before opening a PR.
 
-## 9. Dependencies
+## 12. Workflow and Traceability
 
-Prefer Nest/platform capabilities already in the project before adding another library.
+Use:
 
-Infrastructure dependencies such as databases, auth providers, queues, caches, object storage, observability vendors, and cloud SDKs belong at project level unless they become part of the template's explicit scope.
+```text
+Notion requirement/model
+        ↓
+GitHub issue
+        ↓
+focused branch + commits
+        ↓
+pull request + tests
+        ↓
+CI/review
+        ↓
+main
+```
 
-## 10. Workflow
-
-Use issue → branch → focused commits → pull request → CI/review → `main`.
-
-Use Conventional Commits and keep commits meaningful.
-
-## Template Adoption Checklist
-
-When creating a new repository from this template:
-
-1. Rename the package in `package.json`.
-2. Replace template branding/documentation with project-specific information.
-3. Review `.env.example` and remove defaults the project does not need.
-4. Choose project-level infrastructure explicitly.
-5. Add domain modules only when implementation begins.
-6. Keep `RULESET.md` updated if the project intentionally diverges from these defaults.
+Use Conventional Commits and keep coursework contributions individually traceable.
